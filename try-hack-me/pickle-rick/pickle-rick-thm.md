@@ -170,6 +170,6 @@ Root access successfully obtained.
 | Tool | Purpose | Usage |
 |------|---------|-------|
 | Nmap | Network scanner | Port discovery and service/version detection |
-| ffuf | Web fuzzer | Directory and file enumeration on the TeamCity web interface |
+| ffuf | Web fuzzer | Directory and file enumeration |
 | Netcat | Listener | Reverse shell connection |
 | Python3 | Exploitation | Reverse shell execution |
