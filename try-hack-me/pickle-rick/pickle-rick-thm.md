@@ -37,8 +37,6 @@ Inspecting the page source reveals a hidden comment with a username:
 <!-- Note to self, remember username! Username: R1ckRul3s -->
 ```
 
-------------------------------------------------------------------------
-
 ### Directory Fuzzing
 
 Proceeding with directory enumeration using ffuf:
@@ -91,8 +89,6 @@ Running `ls` reveals:
 
 Attempting to read the ingredient directly results in access denied, so
 a reverse shell is required.
-
-------------------------------------------------------------------------
 
 ### Reverse Shell
 
