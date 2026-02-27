@@ -1,4 +1,4 @@
-Proceeding with directory enumeration using [[ffuf]]:
+Proceeding with directory enumeration using ffuf:
 ```bash
 ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt -u http://10.113.185.115/FUZZ -e .php,.txt,.html,.bak -fs 279 -t 100 2>/dev/null
 ```

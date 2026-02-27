@@ -1,5 +1,5 @@
 
-Starting with a port scan using [[Nmap]]:
+Starting with a port scan using Nmap:
 ```bash
 nmap -sC -sV -A 10.113.185.115
 ```
